@@ -457,5 +457,9 @@ summary(fit)
 
 **A. Adding 5 individuals to existing clusters will increase power by a lesser amount. In the limiting case of ICC=1, adding 5 individuals to previous clusters would have no effect on power, while adding 5 individuals in a new cluster would increase our effective N by 1.**
 
+# Reference
 
+[J-PAL's Github](https://github.com/J-PAL/Sample_Size_and_Power.git)
+
+[J-PAL's website on Power Calculations](https://www.povertyactionlab.org/resource/power-calculations)
 
