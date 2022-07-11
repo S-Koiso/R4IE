@@ -1,0 +1,137 @@
+---
+title: "Balance Test"
+author: "Satoshi Koiso"
+date: "`r format(Sys.time(), '%m/%d/%Y')`"
+output: 
+  html_document:
+    theme: "readable"
+    toc: true
+    toc_float: true
+  word_document: default
+  pdf_document:
+    df_print: paged
+    latex_engine: xelatex
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+if (TRUE) {
+  list.of.packages <- c("tidyverse", "haven", "here",
+                      "kableExtra","rstudioapi","DescTools","qwraps2","data.table",
+                      "stargazer","readxl","dplyr","rootSolve","ICC", "randomizr",
+                      "multiwayvcov", "lmtest", "knitr","devtools", "Hmisc",
+                      "compareGroups", "naniar")
+  # sapply(list.of.packages, function(x) pacman::p_load(get(x)))
+
+  new.packages <- list.of.packages[
+    !( list.of.packages %in% installed.packages()[,"Package"] )
+    ]
+  if(length(new.packages)) install.packages(new.packages,
+                                            repos = "https://cloud.r-project.org")
+
+  lapply(list.of.packages, library, character.only = TRUE)
+}
+
+devtools::install_github('vikjam/pwrcalc')
+## If you have trouble installing pwrcalc, you can download it manually by using the .tar.gz file provided. 
+## To install it manually, go to "Packages", select "Install" and then "Package Archive" in the install menu. 
+
+setwd(dirname(getActiveDocumentContext()$path)) 
+knitr::opts_knit$set(root.dir = here())
+knitr::opts_chunk$set(echo = T, eval = T, message = F, warning = F, fig.pos = "H", fig.height = 7, fig.width = 7)
+
+print_code <- TRUE
+```
+
+
+# Balance Test
+ 
+The aim of randomization is to produce a balance in characteristics in the treatment/control groups.
+
+
+# Example 
+
+The `balsakhi` dataset is provided with the package `pwrcalc`. We'll use this dataset to estimate the control mean:
+
+```{r}
+library(pwrcalc)
+data(balsakhi)
+
+# Let us view the `balsakhi `data that we have just loaded:
+View(balsakhi)
+```
+
+
+# Data Exploration
+
+Let's explore the balance in the `balsakhi` study by presenting the means and standard deviations of the baseline test scores (total, math, and verbal) and age, gender, division, research group, as well as whether they cheated, they were helped, and they took it later. This can be done very easily with the `compareGroups()` function. 
+
+
+```{r}
+#Generate summaries of the variables by treatment group and save results as baselines
+baselines <- compareGroups(bal ~ age + gender + div + researchgroup + sessiond + pre_tot + pre_math + pre_verb + precheated+ prehelped + prelater + pre_totnorm + pre_mathnorm + pre_verbnorm, data = balsakhi)
+#Use the createTable function to display the results saved in baselines
+baseline.table <- createTable(baselines, show.ratio = FALSE, show.p.overall=TRUE)
+#Display the created summary table
+baseline.table
+
+```
+
+
+```{r}
+# to show ratio in table,
+createTable(baselines, show.ratio=TRUE)
+
+# Odds Ratio (OR) is a measure of association between exposure and an outcome
+```
+
+It looks like some variables have missing data.
+Let's do data cleaning.
+
+
+```{r}
+missing <- miss_var_summary(balsakhi)
+print(missing, n=76)
+# should not use age and takehome
+# found empty cells ("") are not treated as NA
+
+# Convert "" to NA
+balsakhi[balsakhi == ""] <- NA
+
+# chack NA
+missing <- miss_var_summary(balsakhi)
+print(missing, n=76)
+
+# select columns
+base_var <- c("bal","gender","div","researchgroup","sessiond","pre_tot","pre_math", "pre_verb","precheated","prehelped","prelater","pre_totnorm","pre_mathnorm","pre_verbnorm")
+balsakhi_base <- balsakhi[,base_var]
+
+# drop na
+balsakhi_base_cleaned <- drop_na(balsakhi_base)
+missing <- miss_var_summary(balsakhi_base_cleaned)
+print(missing, n=76)
+```
+
+# Balance Table
+
+Finally, create the balance table
+
+```{r}
+#Generate summaries of the variables by treatment group and save results as baselines
+baselines <- compareGroups(bal ~ gender + div + researchgroup + sessiond + pre_tot + pre_math + pre_verb + precheated+ prehelped + prelater + pre_totnorm + pre_mathnorm + pre_verbnorm, data = balsakhi_base_cleaned)
+#Use the createTable function to display the results saved in baselines
+baseline.table <- createTable(baselines, show.ratio = FALSE, show.p.overall=TRUE)
+#Display the created summary table
+baseline.table
+
+```
+
+
+```{r}
+# to show ratio in table,
+createTable(baselines, show.ratio=TRUE)
+
+# Odds Ratio (OR) is a measure of association between exposure and an outcome
+```
+
+Some variables are not balanced at baseline.

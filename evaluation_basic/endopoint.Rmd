@@ -1,0 +1,131 @@
+---
+title: "Endpoint"
+author: "Satoshi Koiso"
+date: "`r format(Sys.time(), '%m/%d/%Y')`"
+output: 
+  html_document:
+    theme: "readable"
+    toc: true
+    toc_float: true
+  word_document: default
+  pdf_document:
+    df_print: paged
+    latex_engine: xelatex
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+if (TRUE) {
+  list.of.packages <- c("tidyverse", "haven", "here",
+                      "kableExtra","rstudioapi","DescTools","qwraps2","data.table",
+                      "stargazer","readxl","dplyr","rootSolve","ICC", "randomizr",
+                      "multiwayvcov", "lmtest", "knitr","devtools", "Hmisc",
+                      "compareGroups", "naniar")
+  # sapply(list.of.packages, function(x) pacman::p_load(get(x)))
+
+  new.packages <- list.of.packages[
+    !( list.of.packages %in% installed.packages()[,"Package"] )
+    ]
+  if(length(new.packages)) install.packages(new.packages,
+                                            repos = "https://cloud.r-project.org")
+
+  lapply(list.of.packages, library, character.only = TRUE)
+}
+
+devtools::install_github('vikjam/pwrcalc')
+## If you have trouble installing pwrcalc, you can download it manually by using the .tar.gz file provided. 
+## To install it manually, go to "Packages", select "Install" and then "Package Archive" in the install menu. 
+
+setwd(dirname(getActiveDocumentContext()$path)) 
+knitr::opts_knit$set(root.dir = here())
+knitr::opts_chunk$set(echo = T, eval = T, message = F, warning = F, fig.pos = "H", fig.height = 7, fig.width = 7)
+
+print_code <- TRUE
+```
+
+# Endpoints
+ 
+There are a few types of endpoints.
+
+- Continuous Endpoints: The outcome is described as continuous number. Usually, the mean and the sd are used.
+
+- Categorical Endpoints: The outcome is described as binary (Yes or No). Usually, the percentage is used.
+
+- Composite Endpoints: Multiple categorical outcomes
+
+- Count Endpoints: Histogram-like
+
+- Survival Endpoints
+
+# Example 
+
+Using the `balsakhi` dataset, provided with the package `pwrcalc`. We'll use this dataset to estimate the control mean:
+```{r}
+library(pwrcalc)
+data(balsakhi)
+
+# Let us view the `balsakhi `data that we have just loaded:
+View(balsakhi)
+```
+
+
+## Continuous endpoint
+
+The variable `post_math` shows the absolute math score on post-test (integer).
+
+```{r}
+balsakhi %>% 
+  group_by(bal) %>% 
+  summarise(mean_post_math=mean(post_math, na.rm=TRUE), sd_post_math=sd(post_math,na.rm=TRUE))
+
+
+# Score change
+bal_math <- balsakhi %>% 
+  filter(!is.na(pre_math)&!is.na(post_math))
+bal_math$diff_math <- bal_math$post_math - bal_math$pre_math
+bal_math$pct_change_math <- bal_math$diff_math/bal_math$pre_math * 100
+
+# visualize histogram
+ggplot(data = bal_math, aes(x=pct_change_math))+
+  geom_histogram(fill="white", color="black", binwidth = 50)+
+  facet_wrap(~bal)+
+  xlab("Percentage Change in Math from Pre-test")
+
+
+```
+
+## Categorical endpoint
+
+The variable `postmath1std` shows if a student passed standard 1 math competencies in post-test (Passed = 1, Failed = 0).
+
+```{r}
+balsakhi %>% 
+  filter(!is.na(postmath1std)) %>% 
+  count(bal,postmath1std) %>% 
+  mutate(pct=100*n/sum(n))
+
+table(balsakhi$postmath1std,balsakhi$bal)
+```
+
+
+
+```{r}
+#Generate summaries of the variables by treatment group and save results as baselines
+baselines <- compareGroups(bal ~ pre_totnorm + pre_math + pre_verb, data = balsakhi)
+#Use the createTable function to display the results saved in baselines
+baseline.table <- createTable(baselines, show.ratio = FALSE, show.p.overall=FALSE)
+#Display the created summary table
+baseline.table
+
+```
+
+
+```{r}
+# to show ratio in table,
+createTable(baselines, show.ratio=TRUE)
+
+# Odds Ratio (OR) is a measure of association between exposure and an outcome
+```
+
+
+
