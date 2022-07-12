@@ -45,21 +45,25 @@ print_code <- TRUE
 
 # Endpoints
  
-There are a few types of endpoints.
+On RCTs especially in clinical trials, endpoints are prespecified in statistical analysis plans. They are primary and secondary endpoints in addition to safety and/or efficacy measures.
 
-- Continuous Endpoints: The outcome is described as continuous number. Usually, the mean and the sd are used.
+There are a few categories of endpoints.
 
-- Categorical Endpoints: The outcome is described as binary (Yes or No). Usually, the percentage is used.
+- Continuous Endpoints: The outcome is described as continuous number. Usually, the mean and the standard deviation are used. If the distribution is skewed, the median can be displayed instead of the mean.
 
-- Composite Endpoints: Multiple categorical outcomes
+- Categorical Endpoints: The outcome can be described as binary (Yes or No). Usually, the percentage of each category is used.
 
-- Count Endpoints: Histogram-like
+- Composite Endpoints: Combine multiple categorical outcomes. Binary results are summarized as categorical variable.
 
-- Survival Endpoints
+- Count Endpoints: Non-normal distribution and discrete values. Histogram-like appearance.
+
+- Survival (time-to-event) Endpoints: Assess the time to any recurrence of episode.
+
 
 # Example 
 
 Using the `balsakhi` dataset, provided with the package `pwrcalc`. We'll use this dataset to estimate the control mean:
+
 ```{r}
 library(pwrcalc)
 data(balsakhi)
@@ -71,24 +75,31 @@ View(balsakhi)
 
 ## Continuous endpoint
 
+If we want to know the percentage change from baseline in math score after the balsakhi program, we can explore the outcome as a continuous endpoint.
 The variable `post_math` shows the absolute math score on post-test (integer).
 
 ```{r}
+# Simple table of score comparison by group
 balsakhi %>% 
   group_by(bal) %>% 
   summarise(mean_post_math=mean(post_math, na.rm=TRUE), sd_post_math=sd(post_math,na.rm=TRUE))
 
 
-# Score change
+# Score change in math
 bal_math <- balsakhi %>% 
   filter(!is.na(pre_math)&!is.na(post_math))
 bal_math$diff_math <- bal_math$post_math - bal_math$pre_math
 bal_math$pct_change_math <- bal_math$diff_math/bal_math$pre_math * 100
 
 # visualize histogram
+
+## new labels
+labels <- c("0"="Control","1"="Treatment")
+
+## plot
 ggplot(data = bal_math, aes(x=pct_change_math))+
   geom_histogram(fill="white", color="black", binwidth = 50)+
-  facet_wrap(~bal)+
+  facet_grid(~bal, labeller = labeller(bal = labels))+ # change labels
   xlab("Percentage Change in Math from Pre-test")
 
 
@@ -96,6 +107,7 @@ ggplot(data = bal_math, aes(x=pct_change_math))+
 
 ## Categorical endpoint
 
+If we want to know whether the percentage from baseline in passing rate of standard 1 math test decreased or i
 The variable `postmath1std` shows if a student passed standard 1 math competencies in post-test (Passed = 1, Failed = 0).
 
 ```{r}
@@ -104,7 +116,15 @@ balsakhi %>%
   count(bal,postmath1std) %>% 
   mutate(pct=100*n/sum(n))
 
-table(balsakhi$postmath1std,balsakhi$bal)
+# Tabulate with count
+table(balsakhi$postmath1std,balsakhi$bal, dnn = c("Math1","Treatment"))
+
+# Tabulate with proportion
+prop.table(table(balsakhi$postmath1std,balsakhi$bal, dnn = c("Math1","Treatment")))
+
+## If we shorten the digit
+options(digits = 2)
+prop.table(table(balsakhi$postmath1std,balsakhi$bal, dnn = c("Math1","Treatment")))
 ```
 
 
