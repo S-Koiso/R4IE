@@ -111,33 +111,81 @@ If we want to know whether the percentage from baseline in passing rate of stand
 The variable `postmath1std` shows if a student passed standard 1 math competencies in post-test (Passed = 1, Failed = 0).
 
 ```{r}
-balsakhi %>% 
+bal_math %>% 
   filter(!is.na(postmath1std)) %>% 
   count(bal,postmath1std) %>% 
   mutate(pct=100*n/sum(n))
 
 # Tabulate with count
-table(balsakhi$postmath1std,balsakhi$bal, dnn = c("Math1","Treatment"))
+table(bal_math$postmath1std,bal_math$bal, dnn = c("Math1","Treatment"))
 
 # Tabulate with proportion
-prop.table(table(balsakhi$postmath1std,balsakhi$bal, dnn = c("Math1","Treatment")))
+prop.table(table(bal_math$postmath1std,bal_math$bal, dnn = c("Math1","Treatment")))
 
-## If we shorten the digit
+## If we want to shorten the digit
 options(digits = 2)
-prop.table(table(balsakhi$postmath1std,balsakhi$bal, dnn = c("Math1","Treatment")))
+prop.table(table(bal_math$postmath1std,bal_math$bal, dnn = c("Math1","Treatment")))
 ```
 
+## Composite endpoint
 
+If we are interested in whether respondents passed either standard 1 math test, standard 2 math test or standard 3 math test. Here we will generate a binary composite endpoint for this from the three variables in the `balsakhi` dataset.
 
 ```{r}
-#Generate summaries of the variables by treatment group and save results as baselines
-baselines <- compareGroups(bal ~ pre_totnorm + pre_math + pre_verb, data = balsakhi)
-#Use the createTable function to display the results saved in baselines
-baseline.table <- createTable(baselines, show.ratio = FALSE, show.p.overall=FALSE)
-#Display the created summary table
-baseline.table
+bal_math <- bal_math %>% 
+  mutate(
+    # Dichotomize the variable for math tests
+    # Generate a combined binary endpoint for having any math tests pass
+    combined = factor(
+      ifelse(
+        # Check for passing standard 1 math test
+        postmath1std == 1 & 
+          # ... and passing standard 2 math test
+          postmath2std == 1 & 
+          # ... and passing standard 3 math test
+          postmath3std == 1,
+        "All pass", 
+        "At least one fail"
+      ),
+      levels = c("All pass", "At least one fail")
+    )
+  )
 
+# Tabulate the new composite endpoint
+table(bal_math$combined, useNA = "ifany")
 ```
+
+# Hypothesis testing
+
+Our interest is whether balsakhi program positively impacted the students academic performance.
+
+- Null Hypothesis: $H_0: \mu_1 = \mu_2$
+
+- Alternative Hypothesis (two-sided): $H_A: \mu_1 \neq \mu_2$
+
+- Alternative Hypothesis (one-sided): $H_A: \mu_1 < \mu_2$
+
+To test the hypothesis, we will estimate treatment effect (e.g. mean difference). Usually, confidence interval is 95\%.
+
+
+Continuous
+
+For continuous measure, if we find the changes from baseline within the groups are normally distributed, we can test whether the means are equal using a two-sample t-test.
+
+`var.equal` argument is to specify whether we assume that the two variances, or standard deviations, are equal.
+
+If we find the changes from baseline is not normally distributed (i.e. affected by skewness), we can use Wilcoxon Rank Sum test. Here the null hypothesis is the distribution of the two populations are the same. The alternative hypothesis is that there is a left or right translation shift.
+
+
+Binary 
+
+We can use the chi-squared test to test the null hypothesis of equal group proportions.
+
+
+Important assumptions
+
+We assume that the observations in the treatment groups are independent and that the randomization achieved similar patient characteristics between groups.
+
 
 
 ```{r}
