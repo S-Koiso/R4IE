@@ -16,7 +16,7 @@ always_allow_html: true
 
 ```{r setup, include=FALSE}
 if (TRUE) {
-  list.of.packages <- c("tidyverse", "haven", "here",
+  list.of.packages <- c("tidyverse", "haven", "here","labelled",
                       "kableExtra","rstudioapi","DescTools","qwraps2","data.table",
                       "stargazer","readxl","dplyr","rootSolve","ICC", "randomizr",
                       "multiwayvcov", "lmtest", "knitr","devtools", "Hmisc",
@@ -87,9 +87,13 @@ balsakhi %>%
 
 # Score change in math
 bal_math <- balsakhi %>% 
-  filter(!is.na(pre_math)&!is.na(post_math))
+  filter(!is.na(pre_math) & !is.na(post_math))
 bal_math$diff_math <- bal_math$post_math - bal_math$pre_math
 bal_math$pct_change_math <- bal_math$diff_math/bal_math$pre_math * 100
+
+## labeling
+var_label(bal_math$diff_math) <- "Difference in math score bw pre and post"
+var_label(bal_math$pct_change_math) <- "Percentage difference in math score compared to pre-test"
 
 # visualize histogram
 
@@ -168,16 +172,36 @@ Our interest is whether balsakhi program positively impacted the students academ
 To test the hypothesis, we will estimate treatment effect (e.g. mean difference). Usually, confidence interval is 95\%.
 
 
-Continuous
+## Continuous measure - Comparing means
 
-For continuous measure, if we find the changes from baseline within the groups are normally distributed, we can test whether the means are equal using a two-sample t-test.
+For continuous measure, if we find *the changes from baseline within the groups are normally distributed*, we can test whether the means are equal using **a two-sample t-test**.
 
-`var.equal` argument is to specify whether we assume that the two variances, or standard deviations, are equal.
+`var.equal` argument in `t.test` function is to specify whether we assume that the two variances, or standard deviations, are equal.
 
-If we find the changes from baseline is not normally distributed (i.e. affected by skewness), we can use Wilcoxon Rank Sum test. Here the null hypothesis is the distribution of the two populations are the same. The alternative hypothesis is that there is a left or right translation shift.
+If we find *the changes from baseline is not normally distributed (i.e. affected by skewness)*, we can use **Wilcoxon Rank Sum test**. Here the null hypothesis is the distribution of the two populations are the same. The alternative hypothesis is that there is a left or right translation shift.
+
+```{r}
+####
+# T-test (we assume the changes from baseline are normally distributed)
+####
+
+#Perform the t-test, assuming the variances are equal in the treatment groups
+t.test(diff_math~ bal, var.equal=TRUE, data = bal_math)
+
+#Use the compareGroups function to save a summary of the results in diff_math
+diff_math.test <- compareGroups(bal ~ diff_math , data = bal_math)
+
+#Use the createTable function to summarize and store the results saved in diff_math.test.
+diff_math.table <- createTable(diff_math.test, show.ratio = FALSE, show.p.overall=TRUE)
+
+#Display the results of diff_math.table
+diff_math.table
+
+```
 
 
-Binary 
+
+## Binary 
 
 We can use the chi-squared test to test the null hypothesis of equal group proportions.
 
@@ -187,13 +211,10 @@ Important assumptions
 We assume that the observations in the treatment groups are independent and that the randomization achieved similar patient characteristics between groups.
 
 
+## Summary
 
-```{r}
-# to show ratio in table,
-createTable(baselines, show.ratio=TRUE)
+The below table shows what test is used for what outcome variable.
 
-# Odds Ratio (OR) is a measure of association between exposure and an outcome
-```
-
-
-
+| Outcome | Test | Assumption|
+|---------|------|------|
+| Continuous | t-test | the variances of the changes from baseline, or standard deviations, are equal. |
